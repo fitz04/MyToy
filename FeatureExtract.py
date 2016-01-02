@@ -10,15 +10,15 @@ wavroot = 'D:\myProject\data\wav'
 subdirs = [x for x in os.listdir(wavroot) if os.path.isdir(os.path.join(wavroot, x))]
 
 for spkid in subdirs:
-	wavlist = glob.glob(os.path.join(wavroot, spkid) + '/*.wav')
-	print (len(wavlist))
-	if spkid not in h5f:
-		grp = h5f.create_group(spkid)
-		for fn in wavlist:
-			print('Extract [%s:%s]'%(spkid, os.path.split(fn)[1]))
-			(rate,sig) = wav.read(fn)
-			mfcc_feat = mfcc(sig,rate)
-			grp.create_dataset(os.path.basename(fn), data=mfcc_feat)
+    wavlist = glob.glob(os.path.join(wavroot, spkid) + '/*.wav')
+    print (len(wavlist))
+    if spkid not in h5f:
+        grp = h5f.create_group(spkid)
+        for fn in wavlist:
+            print('Extract [%s:%s]'%(spkid, os.path.split(fn)[1]))
+            (rate,sig) = wav.read(fn)
+            mfcc_feat = mfcc(sig,rate)
+            grp.create_dataset(os.path.basename(fn), data=mfcc_feat)
 
 h5f.close()
 
