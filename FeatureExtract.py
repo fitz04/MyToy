@@ -6,7 +6,7 @@ import h5py, os, glob
 
 h5f = h5py.File('feat.hdf5', 'w')
 
-wavroot = 'D:\myProject\data\wav'
+wavroot = 'F:/ken/Data/SpekerIdDB/NoiseMixedData/class14/Class_14_clean_wav'
 subdirs = [x for x in os.listdir(wavroot) if os.path.isdir(os.path.join(wavroot, x))]
 
 for spkid in subdirs:

@@ -10,7 +10,7 @@ inputNodeLen = contextLen * 13 # mfcc를 기준으로 13차수
 
 
 
-h5f = h5py.File('test.hdf5', 'r+')
+h5f = h5py.File('feat.hdf5', 'r+')
 
 if '/context' in h5f:
     del h5f['context']
@@ -40,7 +40,7 @@ for classid, key in enumerate(classes):
     for dkey in grp.keys(): #tmplst[:1]:
         print(dkey, grp[dkey].shape, classid, ctxRowId)
         size = grp[dkey].shape[0]
-        for idx in range(0, size-contextLen, contextLeft):
+        for idx in range(0, size-contextLen):
             arr = grp[dkey][idx:idx+contextLen]         
             nodeInput[ctxRowId] = arr.flatten()
             label[ctxRowId] = classid
