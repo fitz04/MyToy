@@ -1,0 +1,5 @@
+# UI 의존성 (Chainlit 사용 시)
+-r requirements-core.txt
+
+# Chainlit UI
+chainlit>=1.0.0
