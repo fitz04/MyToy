@@ -2,11 +2,119 @@
 
 > **목표**: DeepAgent + Chainlit 기반으로 실제 코딩 작업을 자동화하는 프로덕션급 AI 코딩 에이전트 구축
 
+> **업데이트**: 2025-11-15 - Phase 1, 2 완료! 다음은 UI/UX 개선 (Phase 3)
+
 ---
 
-## 📊 현재 상태 (As-Is)
+## 🎯 **최우선 과제: Phase 3 - UI/UX 개선** (2025-11-15)
 
-### ✅ 구현 완료
+### 🔴 **긴급: 프로젝트 로딩 시스템** (가장 중요!)
+**현재 문제**: UI에서 프로젝트를 로드할 방법이 없어서 실제 코딩 어시스턴트 기능 사용 불가
+
+**구현 필요사항**:
+```python
+# app.py에 추가
+@cl.on_chat_start
+async def start():
+    # 1. 프로젝트 경로 입력 UI
+    settings = await cl.ChatSettings(
+        [
+            TextInput(
+                id="project_path",
+                label="프로젝트 경로",
+                initial="/path/to/project"
+            ),
+            Switch(id="auto_analyze", label="자동 분석", initial=True),
+        ]
+    ).send()
+
+    # 2. 파일 트리 생성 및 표시
+    # 3. 선택한 파일들 RAG 인덱싱
+    # 4. 프로젝트 컨텍스트 세션에 저장
+```
+
+**타임라인**: 1-2일
+
+---
+
+### 🔴 **긴급: 세션 지속성** (매우 중요!)
+**현재 문제**: 재시작 시 모든 분석 데이터와 RAG 인덱스 사라짐
+
+**구현 필요사항**:
+```python
+# utils/session_manager.py
+class SessionManager:
+    """프로젝트별 세션 데이터 관리"""
+
+    async def save_session(self, project_path: str, data: dict):
+        """
+        저장할 데이터:
+        - 분석된 파일 목록
+        - RAG 인덱스 위치
+        - 대화 히스토리
+        - 프로젝트 설정
+        """
+
+    async def load_session(self, project_path: str) -> dict:
+        """이전 세션 복원"""
+```
+
+**저장 위치**: `.agent_cache/{project_hash}/`
+**타임라인**: 1일
+
+---
+
+### 🟡 **중요: 다국어 지원** (한국어/영어)
+**현재 문제**: 모든 응답이 영어로 나옴
+
+**구현 필요사항**:
+```python
+# config/settings.py에 추가
+class Settings(BaseSettings):
+    language: str = "ko"  # ko, en
+
+# agents/prompts.py 분리
+PROMPTS = {
+    "ko": {
+        "system": "당신은 전문 코딩 어시스턴트입니다...",
+        "analyze": "다음 코드를 분석해주세요...",
+    },
+    "en": {
+        "system": "You are a professional coding assistant...",
+        "analyze": "Please analyze the following code...",
+    }
+}
+```
+
+**타임라인**: 0.5일
+
+---
+
+## 📊 현재 상태 (As-Is) - 2025-11-15 업데이트
+
+### ✅ Phase 1 완료 (Week 1-2)
+- [x] **파일 쓰기 도구** (`tools/file_operations.py`) ✅
+  - write_file, edit_file, insert_code, delete_lines
+  - 자동 백업 시스템
+  - Diff 생성
+- [x] **Git 통합** (`tools/git_operations.py`) ✅
+  - git_status, git_diff, git_commit
+  - smart_commit
+  - 브랜치 관리
+- [x] **TODO 계획 시스템** (`agents/planner.py`) ✅
+  - Task, Plan 데이터 모델
+  - 의존성 관리
+  - 진행 상황 추적
+
+### ✅ Phase 2 완료 (Week 3-4)
+- [x] **에러 자동 수정** (`agents/error_fixer.py`) ✅
+  - Traceback 파싱 및 분석
+  - LLM 기반 수정 제안
+  - 자동 재시도 (최대 3회)
+  - 8가지 에러 타입 지원
+  - **실제 LLM 테스트 통과!**
+
+### ✅ 기타 기능 (이미 구현됨)
 - [x] 다중 LLM 지원 (Claude, OpenAI, Groq, DeepInfra)
 - [x] LLM 전환 기능 (`/switch`)
 - [x] 로컬 파일 **읽기** 및 분석
@@ -18,9 +126,16 @@
 - [x] Chainlit UI 기본 구조
 - [x] 대화형 인터페이스
 
-### ❌ 미구현 (핵심 부족 기능)
-- [ ] **파일 쓰기/수정** - 가장 중요!
-- [ ] Git 자동화 (commit, branch, PR)
+### 🚧 Phase 3 미구현 (UI/UX 개선 필요)
+- [ ] **프로젝트 로딩 시스템** - 가장 긴급! 🔴
+- [ ] **세션 지속성** - 매우 중요! 🔴
+- [ ] **다국어 지원** (한국어/영어) - 중요! 🟡
+
+### ❌ Phase 4 이후 미구현 기능
+- [ ] Docker 샌드박스
+- [ ] 백그라운드 작업 큐
+- [ ] 플러그인 시스템
+- [ ] 멀티 에이전트
 - [ ] TODO 계획 및 추적 시스템
 - [ ] 에러 자동 분석 및 수정
 - [ ] 코드 리뷰 및 제안

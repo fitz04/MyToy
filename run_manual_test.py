@@ -6,6 +6,10 @@
 import asyncio
 import sys
 from pathlib import Path
+from dotenv import load_dotenv
+
+# .env 파일 로드
+load_dotenv()
 
 # 프로젝트 루트를 Python path에 추가
 sys.path.insert(0, str(Path(__file__).parent))
