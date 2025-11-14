@@ -2,13 +2,16 @@
 import chainlit as cl
 from pathlib import Path
 from typing import Optional
+import os
 
 from agents import CodingAgent
 from config import settings
+from utils import get_session_manager
 
 
 # Global agent instance
 agent: Optional[CodingAgent] = None
+session_manager = get_session_manager()
 
 
 @cl.on_chat_start
@@ -16,19 +19,71 @@ async def start():
     """Initialize the chat session."""
     global agent
 
-    # Get project path from settings or use current directory
-    project_path = cl.user_session.get("project_path", str(Path.cwd()))
+    # 프로젝트 경로 설정 UI
+    settings_ui = await cl.ChatSettings(
+        [
+            cl.input_widget.TextInput(
+                id="project_path",
+                label="📁 프로젝트 경로",
+                description="분석할 프로젝트의 절대 경로를 입력하세요",
+                initial=str(Path.cwd()),
+                placeholder="/path/to/your/project"
+            ),
+            cl.input_widget.Switch(
+                id="auto_analyze",
+                label="🔍 자동 분석",
+                description="프로젝트를 자동으로 분석하고 RAG에 인덱싱",
+                initial=True
+            ),
+            cl.input_widget.Switch(
+                id="restore_session",
+                label="🔄 세션 복원",
+                description="이전 세션 데이터가 있으면 자동으로 복원",
+                initial=True
+            ),
+        ]
+    ).send()
+
+    # 사용자가 설정한 프로젝트 경로 가져오기
+    project_path = settings_ui.get("project_path", str(Path.cwd()))
+    auto_analyze = settings_ui.get("auto_analyze", True)
+    restore_session = settings_ui.get("restore_session", True)
+
+    # 세션 복원 시도
+    session_data = None
+    if restore_session and await session_manager.session_exists(project_path):
+        session_data = await session_manager.load_session(project_path)
+        await cl.Message(
+            content=f"✅ 이전 세션을 찾았습니다!\n"
+                   f"- 마지막 접근: {session_data.get('last_accessed', 'Unknown')}\n"
+                   f"- 분석된 파일: {session_data.get('analyzed_files_count', 0)}개"
+        ).send()
+
+    # CodingAgent 초기화
     agent = CodingAgent(project_path=project_path)
+
+    # 세션 데이터가 있으면 복원
+    if session_data:
+        # RAG 인덱스 경로 설정
+        rag_index_path = session_data.get("rag_index_path")
+        if rag_index_path and os.path.exists(rag_index_path):
+            # TODO: RAG 인덱스 로드 로직 추가
+            pass
 
     # Get current LLM info
     llm_info = agent.get_llm_info()
     provider = llm_info["provider"]
     model = llm_info["model"]
 
-    # Welcome message
-    welcome_msg = f"""# 🤖 AI Coding Assistant
+    # 프로젝트 정보 표시
+    project_info = f"""# 🤖 AI Coding Assistant
 
 Welcome! I'm your AI coding assistant powered by **{provider}** ({model}).
+
+## 📂 로드된 프로젝트
+- **경로**: `{project_path}`
+- **세션 복원**: {'✅ 활성화' if restore_session else '❌ 비활성화'}
+- **자동 분석**: {'✅ 활성화' if auto_analyze else '❌ 비활성화'}
 
 ## 🎯 Capabilities
 - 📁 **Local File Analysis**: I can read and understand your project files
@@ -38,6 +93,7 @@ Welcome! I'm your AI coding assistant powered by **{provider}** ({model}).
 - 🔄 **Multi-LLM**: Switch between Claude, OpenAI, Groq, and DeepInfra
 
 ## 📝 Available Commands
+- `/load-project` - 프로젝트 다시 로드
 - `/switch <provider>` - Switch LLM provider (claude, openai, groq, deepinfra)
 - `/analyze` - Analyze current project structure
 - `/search <query>` - Search the web for documentation
@@ -45,6 +101,7 @@ Welcome! I'm your AI coding assistant powered by **{provider}** ({model}).
 - `/stats` - Show RAG statistics
 - `/clear-docs` - Clear uploaded documentation
 - `/clear-chat` - Clear conversation history
+- `/save-session` - 현재 세션 저장
 - `/help` - Show this help message
 
 ## 💡 Tips
@@ -55,7 +112,115 @@ Welcome! I'm your AI coding assistant powered by **{provider}** ({model}).
 Ready to help! What would you like to work on?
 """
 
-    await cl.Message(content=welcome_msg).send()
+    await cl.Message(content=project_info).send()
+
+    # 자동 분석 실행
+    if auto_analyze and Path(project_path).exists():
+        await cl.Message(content="🔍 프로젝트 자동 분석 중...").send()
+        try:
+            # 프로젝트 분석
+            analysis = await agent.analyze_project()
+
+            # 파일 트리 생성
+            file_tree = await generate_file_tree(project_path)
+
+            # 분석 결과 표시
+            result_msg = f"""# 📊 프로젝트 분석 완료!
+
+{analysis}
+
+## 📁 파일 구조
+```
+{file_tree}
+```
+
+세션이 자동으로 저장되었습니다.
+"""
+            await cl.Message(content=result_msg).send()
+
+            # 세션 저장
+            await save_current_session(project_path, agent)
+
+        except Exception as e:
+            await cl.Message(content=f"⚠️ 자동 분석 중 오류: {e}").send()
+
+
+async def generate_file_tree(project_path: str, max_depth: int = 3, max_files: int = 50) -> str:
+    """
+    프로젝트 파일 트리를 생성합니다.
+
+    Args:
+        project_path: 프로젝트 경로
+        max_depth: 최대 깊이
+        max_files: 최대 파일 수
+
+    Returns:
+        파일 트리 문자열
+    """
+    def build_tree(path: Path, prefix: str = "", depth: int = 0, file_count: list = [0]) -> list[str]:
+        if depth > max_depth or file_count[0] >= max_files:
+            return []
+
+        tree_lines = []
+        try:
+            items = sorted(path.iterdir(), key=lambda x: (not x.is_dir(), x.name))
+
+            # 숨겨진 파일/디렉토리 제외
+            items = [item for item in items if not item.name.startswith('.')]
+
+            # node_modules, __pycache__ 등 제외
+            exclude = {'node_modules', '__pycache__', '.git', 'venv', 'env', '.venv', 'dist', 'build'}
+            items = [item for item in items if item.name not in exclude]
+
+            for i, item in enumerate(items):
+                if file_count[0] >= max_files:
+                    tree_lines.append(f"{prefix}... (파일 수 제한 도달)")
+                    break
+
+                is_last = i == len(items) - 1
+                current_prefix = "└── " if is_last else "├── "
+                next_prefix = "    " if is_last else "│   "
+
+                if item.is_dir():
+                    tree_lines.append(f"{prefix}{current_prefix}📁 {item.name}/")
+                    tree_lines.extend(build_tree(item, prefix + next_prefix, depth + 1, file_count))
+                else:
+                    tree_lines.append(f"{prefix}{current_prefix}📄 {item.name}")
+                    file_count[0] += 1
+
+        except PermissionError:
+            tree_lines.append(f"{prefix}... (권한 없음)")
+
+        return tree_lines
+
+    root = Path(project_path)
+    tree = [f"📁 {root.name}/"]
+    tree.extend(build_tree(root))
+
+    return "\n".join(tree)
+
+
+async def save_current_session(project_path: str, agent: CodingAgent):
+    """현재 세션을 저장합니다."""
+    try:
+        # 분석된 파일 목록 수집 (향후 구현)
+        analyzed_files = []
+
+        # 세션 데이터 저장
+        await session_manager.save_session(
+            project_path=project_path,
+            analyzed_files=analyzed_files,
+            settings={
+                "llm_provider": agent.get_llm_info()["provider"],
+                "project_loaded": True
+            }
+        )
+
+        # 마지막 액세스 시간 업데이트
+        await session_manager.update_last_accessed(project_path)
+
+    except Exception as e:
+        print(f"세션 저장 실패: {e}")
 
 
 @cl.on_message
@@ -105,31 +270,33 @@ async def handle_command(command: str):
     if cmd == "/help":
         help_msg = """# 📖 Available Commands
 
+## 프로젝트 관리
+- `/load-project` - 프로젝트 다시 로드 (페이지 새로고침)
+- `/save-session` - 현재 세션 저장
+- `/sessions` - 저장된 세션 목록 보기
+- `/analyze` - Analyze current project structure
+
+## LLM 관리
 - `/switch <provider>` - Switch LLM provider
   - Available: claude, openai, groq, deepinfra
   - Example: `/switch openai`
-
-- `/analyze` - Analyze current project structure
-  - Shows file statistics and structure
-
-- `/search <query>` - Search web for documentation
-  - Example: `/search python asyncio tutorial`
-
-- `/upload` - Upload documentation for RAG
-  - Click to upload files (PDF, DOCX, TXT, MD, code files)
-
-- `/stats` - Show RAG statistics
-  - Display info about uploaded documents
-
-- `/clear-docs` - Clear all uploaded documentation
-  - Removes all documents from RAG
-
-- `/clear-chat` - Clear conversation history
-  - Start fresh conversation
-
 - `/current-llm` - Show current LLM provider
 
+## 문서 및 검색
+- `/search <query>` - Search web for documentation
+  - Example: `/search python asyncio tutorial`
+- `/upload` - Upload documentation for RAG
+- `/stats` - Show RAG statistics
+- `/clear-docs` - Clear all uploaded documentation
+
+## 기타
+- `/clear-chat` - Clear conversation history
 - `/help` - Show this help message
+
+## 💡 팁
+- 프로젝트 경로는 초기 화면에서 설정할 수 있습니다
+- 자동 분석을 활성화하면 프로젝트 파일이 자동으로 인덱싱됩니다
+- 세션은 자동으로 저장되며 다음 접속 시 복원됩니다
 """
         await cl.Message(content=help_msg).send()
 
@@ -225,6 +392,35 @@ async def handle_command(command: str):
     elif cmd == "/clear-chat":
         agent.clear_conversation()
         await cl.Message(content="✅ Cleared conversation history").send()
+
+    elif cmd == "/save-session":
+        project_path = agent.project_path
+        await cl.Message(content="💾 세션 저장 중...").send()
+        try:
+            await save_current_session(project_path, agent)
+            await cl.Message(content=f"✅ 세션이 저장되었습니다.\n경로: {project_path}").send()
+        except Exception as e:
+            await cl.Message(content=f"❌ 세션 저장 실패: {e}").send()
+
+    elif cmd == "/load-project":
+        await cl.Message(content="📂 프로젝트 다시 로드하려면 새로고침(F5)하세요.").send()
+
+    elif cmd == "/sessions":
+        await cl.Message(content="📊 저장된 세션 목록 조회 중...").send()
+        try:
+            sessions = await session_manager.list_sessions()
+            if sessions:
+                msg = "# 💾 저장된 세션 목록\n\n"
+                for i, session in enumerate(sessions, 1):
+                    msg += f"{i}. **{session.get('project_path', 'Unknown')}**\n"
+                    msg += f"   - 마지막 접근: {session.get('last_accessed', 'Unknown')}\n"
+                    msg += f"   - 분석된 파일: {session.get('analyzed_files_count', 0)}개\n"
+                    msg += f"   - 대화 기록: {session.get('history_count', 0)}개\n\n"
+                await cl.Message(content=msg).send()
+            else:
+                await cl.Message(content="저장된 세션이 없습니다.").send()
+        except Exception as e:
+            await cl.Message(content=f"❌ 세션 목록 조회 실패: {e}").send()
 
     else:
         await cl.Message(content=f"Unknown command: {cmd}\nType /help for available commands").send()
