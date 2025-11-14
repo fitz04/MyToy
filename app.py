@@ -92,27 +92,26 @@ Welcome! I'm your AI coding assistant powered by **{provider}** ({model}).
 - ⚡ **Code Execution**: I can run code to verify solutions
 - 🔄 **Multi-LLM**: Switch between Claude, OpenAI, Groq, and DeepInfra
 
-## 📝 Available Commands
-- `/load-project` - 프로젝트 다시 로드
-- `/switch <provider>` - Switch LLM provider (claude, openai, groq, deepinfra)
-- `/analyze` - Analyze current project structure
-- `/search <query>` - Search the web for documentation
-- `/upload` - Upload documentation for RAG
-- `/stats` - Show RAG statistics
-- `/clear-docs` - Clear uploaded documentation
-- `/clear-chat` - Clear conversation history
-- `/save-session` - 현재 세션 저장
-- `/help` - Show this help message
-
 ## 💡 Tips
-- Ask me to analyze your code, explain concepts, or help debug issues
-- I can search the web for official documentation when needed
-- Upload your project docs for better context-aware assistance
+- 아래 버튼을 클릭하거나 자연어로 질문하세요
+- 명령어 대신 **퀵 액션 버튼**을 사용할 수 있습니다
 
 Ready to help! What would you like to work on?
 """
 
-    await cl.Message(content=project_info).send()
+    # 퀵 액션 버튼 생성
+    actions = [
+        cl.Action(name="analyze", value="analyze", label="📊 프로젝트 분석"),
+        cl.Action(name="save_session", value="save_session", label="💾 세션 저장"),
+        cl.Action(name="upload_docs", value="upload_docs", label="📤 문서 업로드"),
+        cl.Action(name="rag_stats", value="rag_stats", label="📈 RAG 통계"),
+        cl.Action(name="switch_llm", value="switch_llm", label="🔄 LLM 전환"),
+        cl.Action(name="show_sessions", value="show_sessions", label="💾 세션 목록"),
+        cl.Action(name="clear_chat", value="clear_chat", label="🗑️ 대화 초기화"),
+        cl.Action(name="help", value="help", label="❓ 도움말"),
+    ]
+
+    await cl.Message(content=project_info, actions=actions).send()
 
     # 자동 분석 실행
     if auto_analyze and Path(project_path).exists():
@@ -221,6 +220,75 @@ async def save_current_session(project_path: str, agent: CodingAgent):
 
     except Exception as e:
         print(f"세션 저장 실패: {e}")
+
+
+@cl.action_callback("analyze")
+async def on_action_analyze(action: cl.Action):
+    """프로젝트 분석 버튼 클릭"""
+    await handle_command("/analyze")
+
+@cl.action_callback("save_session")
+async def on_action_save_session(action: cl.Action):
+    """세션 저장 버튼 클릭"""
+    await handle_command("/save-session")
+
+@cl.action_callback("upload_docs")
+async def on_action_upload_docs(action: cl.Action):
+    """문서 업로드 버튼 클릭"""
+    await handle_command("/upload")
+
+@cl.action_callback("rag_stats")
+async def on_action_rag_stats(action: cl.Action):
+    """RAG 통계 버튼 클릭"""
+    await handle_command("/stats")
+
+@cl.action_callback("switch_llm")
+async def on_action_switch_llm(action: cl.Action):
+    """LLM 전환 버튼 클릭"""
+    # LLM 선택 UI 표시
+    res = await cl.AskActionMessage(
+        content="어떤 LLM으로 전환하시겠습니까?",
+        actions=[
+            cl.Action(name="claude", value="claude", label="🤖 Claude (Anthropic)"),
+            cl.Action(name="openai", value="openai", label="🟢 OpenAI GPT-4"),
+            cl.Action(name="groq", value="groq", label="⚡ Groq (빠름)"),
+            cl.Action(name="deepinfra", value="deepinfra", label="💰 DeepInfra (저렴)"),
+        ],
+    ).send()
+
+    if res:
+        await handle_command(f"/switch {res['value']}")
+
+@cl.action_callback("claude")
+async def on_llm_claude(action: cl.Action):
+    await handle_command("/switch claude")
+
+@cl.action_callback("openai")
+async def on_llm_openai(action: cl.Action):
+    await handle_command("/switch openai")
+
+@cl.action_callback("groq")
+async def on_llm_groq(action: cl.Action):
+    await handle_command("/switch groq")
+
+@cl.action_callback("deepinfra")
+async def on_llm_deepinfra(action: cl.Action):
+    await handle_command("/switch deepinfra")
+
+@cl.action_callback("show_sessions")
+async def on_action_show_sessions(action: cl.Action):
+    """세션 목록 버튼 클릭"""
+    await handle_command("/sessions")
+
+@cl.action_callback("clear_chat")
+async def on_action_clear_chat(action: cl.Action):
+    """대화 초기화 버튼 클릭"""
+    await handle_command("/clear-chat")
+
+@cl.action_callback("help")
+async def on_action_help(action: cl.Action):
+    """도움말 버튼 클릭"""
+    await handle_command("/help")
 
 
 @cl.on_message
