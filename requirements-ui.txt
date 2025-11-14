@@ -1,5 +1,8 @@
-# UI 의존성 (Chainlit 사용 시)
+# UI 의존성 (Chainlit 또는 Gradio)
 -r requirements-core.txt
 
 # Chainlit UI
 chainlit>=1.0.0
+
+# Gradio UI (대안)
+gradio>=4.0.0
