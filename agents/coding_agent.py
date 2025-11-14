@@ -4,14 +4,25 @@ from typing import List, Dict, Optional, AsyncGenerator
 from pathlib import Path
 
 from llm import LLMManager, Message
-from tools import FileAnalyzer, CodebaseParser, WebSearchTool, CodeExecutor
-from rag import Retriever
+from tools import FileAnalyzer, CodebaseParser, CodeExecutor
 from .prompts import (
     SYSTEM_PROMPT,
     USER_PROMPT_TEMPLATE,
     CONTEXT_TEMPLATE,
     ANALYSIS_PROMPT,
 )
+
+# Optional: Web search
+try:
+    from tools import WebSearchTool
+except ImportError:
+    WebSearchTool = None
+
+# Optional: RAG
+try:
+    from rag import Retriever
+except ImportError:
+    Retriever = None
 
 
 class CodingAgent:
@@ -21,9 +32,9 @@ class CodingAgent:
         self.llm_manager = LLMManager()
         self.file_analyzer = FileAnalyzer(project_path)
         self.codebase_parser = CodebaseParser()
-        self.web_search = WebSearchTool()
+        self.web_search = WebSearchTool() if WebSearchTool is not None else None
         self.code_executor = CodeExecutor()
-        self.retriever = Retriever()
+        self.retriever = Retriever() if Retriever is not None else None
 
         self.conversation_history: List[Message] = []
         self.project_path = Path(project_path) if project_path else Path.cwd()
@@ -53,14 +64,14 @@ class CodingAgent:
         context_parts["relevant_files"] = relevant_files
 
         # RAG context
-        if use_rag:
+        if use_rag and self.retriever is not None:
             rag_context = self.retriever.get_context(user_message, n_results=3)
             context_parts["rag_context"] = rag_context if rag_context else "No relevant documentation found."
         else:
             context_parts["rag_context"] = ""
 
         # Web search if requested
-        if use_web:
+        if use_web and self.web_search is not None:
             web_results = await self._web_search(user_message)
             context_parts["web_results"] = web_results
         else:

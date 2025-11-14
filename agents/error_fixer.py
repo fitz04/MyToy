@@ -182,7 +182,7 @@ class AutoErrorFixer:
         Returns:
             수정 제안 (원인, 방법, 수정된 코드, 추가 작업)
         """
-        from llm.models import Message
+        from llm import Message
 
         # 시스템 프롬프트
         system_prompt = """당신은 Python 에러 수정 전문가입니다.

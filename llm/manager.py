@@ -4,8 +4,17 @@ from config import settings
 from .base import BaseLLM, Message, LLMResponse
 from .claude import ClaudeLLM
 from .openai_llm import OpenAILLM
-from .groq import GroqLLM
-from .deepinfra import DeepInfraLLM
+
+# Optional providers
+try:
+    from .groq import GroqLLM
+except ImportError:
+    GroqLLM = None
+
+try:
+    from .deepinfra import DeepInfraLLM
+except ImportError:
+    DeepInfraLLM = None
 
 
 class LLMManager:
@@ -29,13 +38,18 @@ class LLMManager:
         llm_classes = {
             "claude": ClaudeLLM,
             "openai": OpenAILLM,
-            "groq": GroqLLM,
-            "deepinfra": DeepInfraLLM,
         }
+
+        # Add optional providers if available
+        if GroqLLM is not None:
+            llm_classes["groq"] = GroqLLM
+        if DeepInfraLLM is not None:
+            llm_classes["deepinfra"] = DeepInfraLLM
 
         llm_class = llm_classes.get(provider)
         if not llm_class:
-            raise ValueError(f"Unknown LLM provider: {provider}")
+            available = ", ".join(llm_classes.keys())
+            raise ValueError(f"Provider '{provider}' not available. Available providers: {available}")
 
         llm = llm_class(api_key=api_key, model=model)
         self._llm_cache[provider] = llm
@@ -82,7 +96,12 @@ class LLMManager:
 
     def list_providers(self) -> List[str]:
         """List all available LLM providers."""
-        return ["claude", "openai", "groq", "deepinfra"]
+        providers = ["claude", "openai"]
+        if GroqLLM is not None:
+            providers.append("groq")
+        if DeepInfraLLM is not None:
+            providers.append("deepinfra")
+        return providers
 
     def get_provider_info(self, provider: Optional[str] = None) -> dict:
         """Get information about the specified or current provider."""

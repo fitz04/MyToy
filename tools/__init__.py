@@ -1,7 +1,6 @@
 """Tools module for file analysis, web search, and code execution."""
 from .file_analyzer import FileAnalyzer
 from .codebase_parser import CodebaseParser
-from .web_search import WebSearchTool
 from .executor import CodeExecutor
 from .file_operations import FileOperations, file_ops
 from .git_operations import GitOperations, git_ops
@@ -9,10 +8,17 @@ from .test_runner import TestRunner, TestResult, TestSummary, TestStatus, run_te
 from .code_quality import CodeQuality, CodeIssue, QualityReport, IssueLevel, check_quality
 from .project_templates import ProjectTemplates, Template, create_project
 
+# Optional: Web search (requires duckduckgo-search package)
+try:
+    from .web_search import WebSearchTool
+    _web_search_available = True
+except ImportError:
+    WebSearchTool = None
+    _web_search_available = False
+
 __all__ = [
     "FileAnalyzer",
     "CodebaseParser",
-    "WebSearchTool",
     "CodeExecutor",
     "FileOperations",
     "file_ops",
@@ -32,3 +38,6 @@ __all__ = [
     "Template",
     "create_project",
 ]
+
+if _web_search_available:
+    __all__.append("WebSearchTool")

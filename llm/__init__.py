@@ -2,9 +2,19 @@
 from .base import BaseLLM, Message, LLMResponse
 from .claude import ClaudeLLM
 from .openai_llm import OpenAILLM
-from .groq import GroqLLM
-from .deepinfra import DeepInfraLLM
 from .manager import LLMManager
+
+# Optional: Groq provider
+try:
+    from .groq import GroqLLM
+except ImportError:
+    GroqLLM = None
+
+# Optional: DeepInfra provider
+try:
+    from .deepinfra import DeepInfraLLM
+except ImportError:
+    DeepInfraLLM = None
 
 __all__ = [
     "BaseLLM",
@@ -12,7 +22,10 @@ __all__ = [
     "LLMResponse",
     "ClaudeLLM",
     "OpenAILLM",
-    "GroqLLM",
-    "DeepInfraLLM",
     "LLMManager",
 ]
+
+if GroqLLM is not None:
+    __all__.append("GroqLLM")
+if DeepInfraLLM is not None:
+    __all__.append("DeepInfraLLM")
