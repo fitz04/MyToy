@@ -102,24 +102,24 @@ Ready to help! What would you like to work on?
     # 퀵 액션 버튼 생성
     actions = [
         # 프로젝트 관리
-        cl.Action(name="analyze", value="analyze", label="📊 프로젝트 분석"),
-        cl.Action(name="save_session", value="save_session", label="💾 세션 저장"),
+        cl.Action(name="analyze", value="analyze", label="📊 프로젝트 분석", payload={}),
+        cl.Action(name="save_session", value="save_session", label="💾 세션 저장", payload={}),
 
         # Phase 2 도구들
-        cl.Action(name="run_tests", value="run_tests", label="🧪 테스트 실행"),
-        cl.Action(name="check_quality", value="check_quality", label="🔍 코드 품질"),
-        cl.Action(name="review_code", value="review_code", label="📝 코드 리뷰"),
-        cl.Action(name="create_project", value="create_project", label="🏗️ 프로젝트 생성"),
+        cl.Action(name="run_tests", value="run_tests", label="🧪 테스트 실행", payload={}),
+        cl.Action(name="check_quality", value="check_quality", label="🔍 코드 품질", payload={}),
+        cl.Action(name="review_code", value="review_code", label="📝 코드 리뷰", payload={}),
+        cl.Action(name="create_project", value="create_project", label="🏗️ 프로젝트 생성", payload={}),
 
         # 문서 & RAG
-        cl.Action(name="upload_docs", value="upload_docs", label="📤 문서 업로드"),
-        cl.Action(name="rag_stats", value="rag_stats", label="📈 RAG 통계"),
+        cl.Action(name="upload_docs", value="upload_docs", label="📤 문서 업로드", payload={}),
+        cl.Action(name="rag_stats", value="rag_stats", label="📈 RAG 통계", payload={}),
 
         # 기타
-        cl.Action(name="switch_llm", value="switch_llm", label="🔄 LLM 전환"),
-        cl.Action(name="show_sessions", value="show_sessions", label="💾 세션 목록"),
-        cl.Action(name="clear_chat", value="clear_chat", label="🗑️ 대화 초기화"),
-        cl.Action(name="help", value="help", label="❓ 도움말"),
+        cl.Action(name="switch_llm", value="switch_llm", label="🔄 LLM 전환", payload={}),
+        cl.Action(name="show_sessions", value="show_sessions", label="💾 세션 목록", payload={}),
+        cl.Action(name="clear_chat", value="clear_chat", label="🗑️ 대화 초기화", payload={}),
+        cl.Action(name="help", value="help", label="❓ 도움말", payload={}),
     ]
 
     await cl.Message(content=project_info, actions=actions).send()
@@ -260,10 +260,10 @@ async def on_action_switch_llm(action: cl.Action):
     res = await cl.AskActionMessage(
         content="어떤 LLM으로 전환하시겠습니까?",
         actions=[
-            cl.Action(name="claude", value="claude", label="🤖 Claude (Anthropic)"),
-            cl.Action(name="openai", value="openai", label="🟢 OpenAI GPT-4"),
-            cl.Action(name="groq", value="groq", label="⚡ Groq (빠름)"),
-            cl.Action(name="deepinfra", value="deepinfra", label="💰 DeepInfra (저렴)"),
+            cl.Action(name="claude", value="claude", label="🤖 Claude (Anthropic)", payload={}),
+            cl.Action(name="openai", value="openai", label="🟢 OpenAI GPT-4", payload={}),
+            cl.Action(name="groq", value="groq", label="⚡ Groq (빠름)", payload={}),
+            cl.Action(name="deepinfra", value="deepinfra", label="💰 DeepInfra (저렴)", payload={}),
         ],
     ).send()
 
@@ -373,11 +373,11 @@ async def on_action_check_quality(action: cl.Action):
     res = await cl.AskActionMessage(
         content="어떤 작업을 수행하시겠습니까?",
         actions=[
-            cl.Action(name="format_code", value="format", label="✨ 코드 포매팅 (black)"),
-            cl.Action(name="lint_code", value="lint", label="🔍 린팅 (flake8)"),
-            cl.Action(name="analyze_pylint", value="pylint", label="📊 정적 분석 (pylint)"),
-            cl.Action(name="auto_fix", value="autofix", label="🔧 자동 수정 (isort + black)"),
-            cl.Action(name="check_all", value="all", label="🎯 종합 검사"),
+            cl.Action(name="format_code", value="format", label="✨ 코드 포매팅 (black)", payload={}),
+            cl.Action(name="lint_code", value="lint", label="🔍 린팅 (flake8)", payload={}),
+            cl.Action(name="analyze_pylint", value="pylint", label="📊 정적 분석 (pylint)", payload={}),
+            cl.Action(name="auto_fix", value="autofix", label="🔧 자동 수정 (isort + black)", payload={}),
+            cl.Action(name="check_all", value="all", label="🎯 종합 검사", payload={}),
         ],
     ).send()
 
@@ -576,10 +576,10 @@ async def on_action_create_project(action: cl.Action):
     res = await cl.AskActionMessage(
         content="어떤 프로젝트 템플릿을 생성하시겠습니까?",
         actions=[
-            cl.Action(name="fastapi", value="fastapi", label="⚡ FastAPI - REST API"),
-            cl.Action(name="flask", value="flask", label="🌶️ Flask - Web App"),
-            cl.Action(name="cli", value="cli", label="💻 CLI - Command Line Tool"),
-            cl.Action(name="library", value="library", label="📦 Library - Python Package"),
+            cl.Action(name="fastapi", value="fastapi", label="⚡ FastAPI - REST API", payload={}),
+            cl.Action(name="flask", value="flask", label="🌶️ Flask - Web App", payload={}),
+            cl.Action(name="cli", value="cli", label="💻 CLI - Command Line Tool", payload={}),
+            cl.Action(name="library", value="library", label="📦 Library - Python Package", payload={}),
         ],
     ).send()
 
