@@ -14,6 +14,41 @@ agent: Optional[CodingAgent] = None
 session_manager = get_session_manager()
 
 
+def get_quick_actions():
+    """매 응답마다 표시할 핵심 버튼 반환"""
+    return [
+        cl.Action(name="run_tests", value="run_tests", label="🧪 테스트", payload={}),
+        cl.Action(name="check_quality", value="check_quality", label="🔍 품질", payload={}),
+        cl.Action(name="review_code", value="review_code", label="📝 리뷰", payload={}),
+        cl.Action(name="show_full_menu", value="show_full_menu", label="🔧 전체메뉴", payload={}),
+    ]
+
+
+def get_full_menu_actions():
+    """전체 메뉴 버튼 반환"""
+    return [
+        # 프로젝트 관리
+        cl.Action(name="analyze", value="analyze", label="📊 프로젝트 분석", payload={}),
+        cl.Action(name="save_session", value="save_session", label="💾 세션 저장", payload={}),
+
+        # Phase 2 도구들
+        cl.Action(name="run_tests", value="run_tests", label="🧪 테스트 실행", payload={}),
+        cl.Action(name="check_quality", value="check_quality", label="🔍 코드 품질", payload={}),
+        cl.Action(name="review_code", value="review_code", label="📝 코드 리뷰", payload={}),
+        cl.Action(name="create_project", value="create_project", label="🏗️ 프로젝트 생성", payload={}),
+
+        # 문서 & RAG
+        cl.Action(name="upload_docs", value="upload_docs", label="📤 문서 업로드", payload={}),
+        cl.Action(name="rag_stats", value="rag_stats", label="📈 RAG 통계", payload={}),
+
+        # 기타
+        cl.Action(name="switch_llm", value="switch_llm", label="🔄 LLM 전환", payload={}),
+        cl.Action(name="show_sessions", value="show_sessions", label="💾 세션 목록", payload={}),
+        cl.Action(name="clear_chat", value="clear_chat", label="🗑️ 대화 초기화", payload={}),
+        cl.Action(name="help", value="help", label="❓ 도움말", payload={}),
+    ]
+
+
 @cl.on_chat_start
 async def start():
     """Initialize the chat session."""
@@ -99,30 +134,8 @@ Welcome! I'm your AI coding assistant powered by **{provider}** ({model}).
 Ready to help! What would you like to work on?
 """
 
-    # 퀵 액션 버튼 생성
-    actions = [
-        # 프로젝트 관리
-        cl.Action(name="analyze", value="analyze", label="📊 프로젝트 분석", payload={}),
-        cl.Action(name="save_session", value="save_session", label="💾 세션 저장", payload={}),
-
-        # Phase 2 도구들
-        cl.Action(name="run_tests", value="run_tests", label="🧪 테스트 실행", payload={}),
-        cl.Action(name="check_quality", value="check_quality", label="🔍 코드 품질", payload={}),
-        cl.Action(name="review_code", value="review_code", label="📝 코드 리뷰", payload={}),
-        cl.Action(name="create_project", value="create_project", label="🏗️ 프로젝트 생성", payload={}),
-
-        # 문서 & RAG
-        cl.Action(name="upload_docs", value="upload_docs", label="📤 문서 업로드", payload={}),
-        cl.Action(name="rag_stats", value="rag_stats", label="📈 RAG 통계", payload={}),
-
-        # 기타
-        cl.Action(name="switch_llm", value="switch_llm", label="🔄 LLM 전환", payload={}),
-        cl.Action(name="show_sessions", value="show_sessions", label="💾 세션 목록", payload={}),
-        cl.Action(name="clear_chat", value="clear_chat", label="🗑️ 대화 초기화", payload={}),
-        cl.Action(name="help", value="help", label="❓ 도움말", payload={}),
-    ]
-
-    await cl.Message(content=project_info, actions=actions).send()
+    # 초기 환영 메시지에는 전체 메뉴 표시
+    await cl.Message(content=project_info, actions=get_full_menu_actions()).send()
 
     # 자동 분석 실행
     if auto_analyze and Path(project_path).exists():
@@ -285,6 +298,21 @@ async def on_llm_groq(action: cl.Action):
 @cl.action_callback("deepinfra")
 async def on_llm_deepinfra(action: cl.Action):
     await handle_command("/switch deepinfra")
+
+@cl.action_callback("show_full_menu")
+async def on_action_show_full_menu(action: cl.Action):
+    """전체 메뉴 버튼 클릭 - 모든 기능 표시"""
+    menu_msg = """# 🔧 전체 메뉴
+
+모든 사용 가능한 기능:
+
+**프로젝트 관리**: 분석, 세션 저장
+**개발 도구**: 테스트, 코드 품질, 리뷰, 프로젝트 생성
+**문서 & RAG**: 문서 업로드, 통계
+**기타**: LLM 전환, 세션 관리, 도움말
+"""
+    await cl.Message(content=menu_msg, actions=get_full_menu_actions()).send()
+
 
 @cl.action_callback("show_sessions")
 async def on_action_show_sessions(action: cl.Action):
@@ -730,6 +758,9 @@ async def main(message: cl.Message):
         await msg.stream_token(chunk)
 
     await msg.update()
+
+    # 매 응답마다 핵심 버튼 표시
+    await cl.Message(content="", actions=get_quick_actions()).send()
 
 
 async def handle_command(command: str):
