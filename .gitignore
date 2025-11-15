@@ -52,3 +52,9 @@ logs/
 .pytest_cache/
 .coverage
 htmlcov/
+test_output/
+test_standalone/
+
+# Agent cache & backups
+.agent_cache/
+.agent_backup/

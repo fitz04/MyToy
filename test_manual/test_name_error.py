@@ -4,9 +4,11 @@
 AutoErrorFixer가 자동으로 변수를 정의해야 합니다.
 """
 
-def calculate_total():
-    result = price * quantity  # price, quantity 미정의
+# calculate_total 함수에 매개변수 price와 quantity 추가
+def calculate_total(price, quantity):  # 변경사항: 함수 매개변수 추가
+    result = price * quantity
     return result
 
-total = calculate_total()
+# 함수 호출 시, price와 quantity 값 전달
+total = calculate_total(100, 2)  # 변경사항: 함수 호출 시 인자 제공
 print(f"Total: {total}")
